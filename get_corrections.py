@@ -5,7 +5,7 @@ import soundex
 def get_best_soundex_match(context, chunk):
   
     matches = [(name, distance.get_jaro_distance(name, " ".join(chunk))) for name in context]
-    return min(matches, key = lambda x: x[1])
+    return max(matches, key = lambda x: x[1])
         
 def get_best_jaro_match(context, chunk):
   
