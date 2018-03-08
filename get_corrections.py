@@ -40,9 +40,15 @@ def get_sentence_correction(context, sentence):
     
     name_chunks = get_name_chunks(sentence)
     
-    print name_chunks
+    split_names = []
+    
+    for name in context:
+        split_names.extend(name.split())
+        
+    context.extend(split_names)
     
     for chunk in name_chunks:
+        print "---------------"
         print chunk
         print get_best_soundex_match(context, chunk)
         print get_best_jaro_match(context, chunk)
