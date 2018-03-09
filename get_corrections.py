@@ -5,13 +5,15 @@ import soundex
 def get_best_jaro_match(context, chunk):
   
     matches = [(name, distance.get_jaro_distance(name, " ".join(chunk))) for name in context]
-    return max(matches, key = lambda x: x[1])
+    res = max(matches, key = lambda x: x[1])
+    return res[0], res[1]
         
 def get_best_soundex_match(context, chunk):
   
     instance = soundex.Soundex()
     matches = [(name, instance.compare(name, " ".join(chunk))) for name in context]
-    return min(matches, key = lambda x: x[1])
+    res = min(matches, key = lambda x: x[1])
+    return res[0], 1 - (float(res[1]) / len(res[0]))
 
 def get_name_chunks(sentence):
 
@@ -45,13 +47,10 @@ def pick_best_match(context, chunk):
     soundex_res = get_best_soundex_match(context, chunk)
     jaro_res = get_best_jaro_match(context, chunk)
     
-    if float(soundex_res[1]) > 1 or float(jaro_res[1]) < 0.8:
+    if max(soundex_res[1], jaro_res[1]) < 0.9:
         return chunk
     
-    if soundex_res[0] != jaro_res[0]:
-        return jaro_res[0]
-      
-    return jaro_res[0]
+    return max(soundex_res, jaro_res, key = lambda x: x[1])[0]
         
   
 def get_sentence_correction(context, sentence):
