@@ -2,12 +2,12 @@ from pyjarowinkler import distance
 import soundex
 
 
-def get_best_soundex_match(context, chunk):
+def get_best_jaro_match(context, chunk):
   
     matches = [(name, distance.get_jaro_distance(name, " ".join(chunk))) for name in context]
     return max(matches, key = lambda x: x[1])
         
-def get_best_jaro_match(context, chunk):
+def get_best_soundex_match(context, chunk):
   
     instance = soundex.Soundex()
     matches = [(name, instance.compare(name, " ".join(chunk))) for name in context]
@@ -20,6 +20,10 @@ def get_name_chunks(sentence):
     chunk = []    
     
     for word in words:
+      
+        if len(word) < 2:
+	  continue
+	
         if word[0].isupper() and len(chunk) < 2:
 	    chunk.append(word)
 	else:
@@ -34,11 +38,26 @@ def get_name_chunks(sentence):
         name_chunks.append(chunk)
 
     return name_chunks
+
   
+def pick_best_match(context, chunk):
+  
+    soundex_res = get_best_soundex_match(context, chunk)
+    jaro_res = get_best_jaro_match(context, chunk)
+    
+    if float(soundex_res[1]) > 1 or float(jaro_res[1]) < 0.8:
+        return chunk
+    
+    if soundex_res[0] != jaro_res[0]:
+        return jaro_res[0]
+      
+    return jaro_res[0]
+        
   
 def get_sentence_correction(context, sentence):
     
     name_chunks = get_name_chunks(sentence)
+    corrections = []
     
     split_names = []
     
@@ -48,19 +67,28 @@ def get_sentence_correction(context, sentence):
     context.extend(split_names)
     
     for chunk in name_chunks:
-        print "---------------"
-        print chunk
-        print get_best_soundex_match(context, chunk)
-        print get_best_jaro_match(context, chunk)
+        corrections.append(pick_best_match(context, chunk))
+        
+    return name_chunks, corrections
     
     
 
 
 def get_corrections(context, sentences):
+  
+    corrections = []
     
     for sentence in sentences:
       
-        get_sentence_correction(context, sentence)
+        names, corrections = get_sentence_correction(context, sentence)
+        print names
+        print corrections
+        corrections.append((names, corrections))
+        
+    return corrections
+        
+        
+# TODO: sliding similarity with context - if a word was misclassified with NER
 
 
 
