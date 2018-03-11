@@ -14,6 +14,28 @@ def get_best_soundex_match(context, chunk):
     matches = [(name, instance.compare(name, " ".join(chunk))) for name in context]
     res = min(matches, key = lambda x: x[1])
     return res[0], 1 - (float(res[1]) / len(res[0]))
+  
+  
+def get_subchunk(chunk):
+  
+    subchunk = []
+  
+    for i in range(0, len(chunk)):
+        for j in range(0, len(chunk) - i + 1):
+	    subchunk.append(chunk[j : j + i])
+    return subchunk
+  
+ 
+def get_subchunks(chunks):
+  
+    subchunks = []
+    
+    for chunk in chunks:
+        if len(chunk) > 1:
+	   subchunks.extend(get_subchunk(chunk))
+	   
+    return subchunks
+  
 
 def get_name_chunks(sentence):
 
@@ -37,9 +59,11 @@ def get_name_chunks(sentence):
 	        chunk.append(word)
     
     if chunk:
-        name_chunks.append(chunk)
+        name_chunks.append
+        
+    name_chunks.extend(get_subchunks(name_chunks))
 
-    return name_chunks
+    return [x for x in name_chunks if x]
 
   
 def pick_best_match(context, chunk):
@@ -56,8 +80,7 @@ def pick_best_match(context, chunk):
 def get_sentence_correction(context, sentence):
     
     name_chunks = get_name_chunks(sentence)
-    corrections = []
-    
+    corrections = []    
     split_names = []
     
     for name in context:
