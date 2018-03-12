@@ -8,9 +8,8 @@ def get_best_jaro_match(context, chunk):
     res = max(matches, key = lambda x: x[1])
     return res[0], res[1]
         
-def get_best_soundex_match(context, chunk):
+def get_best_soundex_match(context, chunk, instance):
   
-    instance = soundex.Soundex()
     matches = [(name, instance.compare(name, " ".join(chunk))) for name in context]
     res = min(matches, key = lambda x: x[1])
     return res[0], 1 - (float(res[1]) / len(res[0]))
@@ -23,7 +22,7 @@ def get_subchunk(chunk):
     for i in range(0, len(chunk)):
         for j in range(0, len(chunk) - i + 1):
 	    subchunk.append(chunk[j : j + i])
-    return subchunk
+    return [x for x in subchunk if x]
   
  
 def get_subchunks(chunks):
@@ -59,37 +58,52 @@ def get_name_chunks(sentence):
 	        chunk.append(word)
     
     if chunk:
-        name_chunks.append
+        name_chunks.append(chunk)
         
-    name_chunks.extend(get_subchunks(name_chunks))
-
     return [x for x in name_chunks if x]
+  
+def compose(reslist):  
+    avg_res_score = sum([x[1] for x in reslist]) / len(reslist)
+    res = " ".join([x[0] for x in reslist])
+    return avg_res_score, res
 
   
-def pick_best_match(context, chunk):
+def pick_best_match(context, split_context, chunk, soundex_instance):
   
-    soundex_res = get_best_soundex_match(context, chunk)
+
+    subchunks = get_subchunk(chunk)
+    
+    if subchunks:
+    
+        subchunk_soundex_res = [get_best_soundex_match(split_context, subchunk, soundex_instance) for subchunk in subchunks]
+        subchunk_jaro_res = [get_best_jaro_match(split_context, subchunk, soundex_instance) for subchunk in subchunks]
+
+    else:
+        subchunk_soundex_res = []
+        subchunk_jaro_res = []
+        
+    avg_subchunk_soundex_res = compose(subchunk_soundex_res)
+    avg_subchunk_jaro_res = compose(subchunk_jaro_res)
+
+    soundex_res = get_best_soundex_match(context, chunk, soundex_instance)
     jaro_res = get_best_jaro_match(context, chunk)
     
-    if max(soundex_res[1], jaro_res[1]) < 0.9:
-        return chunk
+    if max(soundex_res[1], jaro_res[1], avg_subchunk_soundex_res, avg_subchunk_jaro_res) < 0.9:
+        return " ".join(chunk)
     
-    return max(soundex_res, jaro_res, key = lambda x: x[1])[0]
+    return max(soundex_res, jaro_res, avg_subchunk_soundex_res, avg_subchunk_jaro_res, key = lambda x: x[1])[0]
         
   
-def get_sentence_correction(context, sentence):
+def get_sentence_correction(context, sentence, soundex_instance):
     
     name_chunks = get_name_chunks(sentence)
     corrections = []    
     split_names = []
     
-    for name in context:
-        split_names.extend(name.split())
-        
     context.extend(split_names)
     
     for chunk in name_chunks:
-        corrections.append(pick_best_match(context, chunk))
+        corrections.append(pick_best_match(context, split_names, chunk, soundex_instance))
         
     return name_chunks, corrections
     
@@ -99,10 +113,11 @@ def get_sentence_correction(context, sentence):
 def get_corrections(context, sentences):
   
     corrections = []
+    soundex_instance = soundex.Soundex()
     
     for sentence in sentences:
       
-        names, corrections = get_sentence_correction(context, sentence)
+        names, corrections = get_sentence_correction(context, sentence, soundex_instance)
         print names
         print corrections
         corrections.append((names, corrections))
